@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 
 // ログインページ用のAPI
 export async function POST(request: NextRequest) {
@@ -13,31 +12,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ユーザー検索
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        department: true,
-        isActive: true,
-      }
-    });
-
-    // 認証が成功した場合の処理
-    if (user) {
-      return NextResponse.json({
-        message: 'ログイン成功',
-        user
-      });
-    }
-
-    return NextResponse.json(
-      { error: 'メールアドレスまたはパスワードが正しくありません' },
-      { status: 401 }
-    );
+    // このエンドポイントではアプリ側のSupabase Auth UIを利用してください
+    // ここではダミー応答のみ返します（ビルド互換性のため）
+    return NextResponse.json({
+      message: 'Supabase Auth を使用してください',
+    }, { status: 405 });
 
   } catch (error) {
     console.error('ログインエラー:', error);
