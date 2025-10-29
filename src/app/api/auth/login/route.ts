@@ -57,15 +57,16 @@ export async function POST(request: NextRequest) {
       throw new Error('JWT_SECRETが設定されていません');
     }
 
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        email: user.email,
-        role: user.role
-      },
-      jwtSecret,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
+    const payload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    };
+    const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as string;
+    const options: jwt.SignOptions = {
+      expiresIn
+    };
+    const token = jwt.sign(payload, jwtSecret, options);
 
     // パスワードを除外してレスポンス（フィールド名を調整）
     const { password: _, is_active, ...rest } = user;
