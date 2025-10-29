@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { prisma } from '@/lib/prisma';
+import { supabaseAdmin } from '@/lib/supabase';
 
 // バリデーションスキーマ
 const loginSchema = z.object({
@@ -25,26 +25,23 @@ export async function POST(request: NextRequest) {
     const { email, password } = loginSchema.parse(body);
 
     // ユーザー検索
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        password: true,
-        name: true,
-        role: true,
-        department: true,
-        isActive: true
-      }
-    });
+    const { data: users, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, password, name, role, department, is_active')
+      .eq('email', email)
+      .eq('is_active', true)
+      .limit(1)
+      .single();
 
-    if (!user || !user.isActive) {
+    if (userError || !users) {
       return NextResponse.json(
         { error: 'メールアドレスまたはパスワードが正しくありません' },
         { status: 401 }
       );
     }
 
+    const user = users as any;
+    
     // パスワード検証
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
@@ -70,8 +67,12 @@ export async function POST(request: NextRequest) {
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
-    // パスワードを除外してレスポンス
-    const { password: _, ...userWithoutPassword } = user;
+    // パスワードを除外してレスポンス（フィールド名を調整）
+    const { password: _, is_active, ...rest } = user;
+    const userWithoutPassword = {
+      ...rest,
+      isActive: is_active
+    };
 
     return NextResponse.json({
       message: 'ログインに成功しました',
@@ -102,9 +103,12 @@ export async function PUT(request: NextRequest) {
     const { email, password, name, role, department } = registerSchema.parse(body);
 
     // メールアドレスの重複チェック
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
+    const { data: existingUser, error: checkError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .limit(1)
+      .single();
 
     if (existingUser) {
       return NextResponse.json(
@@ -118,24 +122,32 @@ export async function PUT(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // ユーザー作成
-    const user = await prisma.user.create({
-      data: {
+    const { data: userData, error: createError } = await supabaseAdmin
+      .from('users')
+      .insert({
         email,
         password: hashedPassword,
         name,
         role,
-        department
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        department: true,
-        isActive: true,
-        createdAt: true
-      }
-    });
+        department,
+        is_active: true
+      })
+      .select('id, email, name, role, department, is_active, created_at')
+      .single();
+
+    if (createError || !userData) {
+      throw createError || new Error('ユーザー作成に失敗しました');
+    }
+
+    const user = {
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role,
+      department: userData.department,
+      isActive: (userData as any).is_active,
+      createdAt: (userData as any).created_at
+    };
 
     return NextResponse.json({
       message: 'ユーザーが正常に作成されました',
