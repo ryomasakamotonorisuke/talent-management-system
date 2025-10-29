@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
@@ -8,6 +9,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { signIn } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -16,24 +18,15 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // セッションストレージにユーザー情報を保存
-        sessionStorage.setItem('user', JSON.stringify(data.user));
-        sessionStorage.setItem('token', 'dummy-token'); // 本番では適切なJWTトークンを使用
-        router.push('/dashboard');
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        setError(error.message);
       } else {
-        setError(data.error || 'ログインに失敗しました');
+        // 認証成功時はAuthProviderで自動的にリダイレクトされる
       }
     } catch (err) {
-      setError('ネットワークエラーが発生しました');
+      setError('ログインに失敗しました');
     } finally {
       setLoading(false);
     }
@@ -48,7 +41,7 @@ export default function LoginPage() {
               タレントマネジメントシステム
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              ログインしてください
+              Supabase認証でログイン
             </p>
           </div>
 
