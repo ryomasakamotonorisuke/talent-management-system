@@ -17,10 +17,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     headers: {
       'X-Client-Info': 'supabase-js-web'
     }
-  },
-  // リージョン設定を明示的に指定
-  db: {
-    schema: 'public'
   }
 })
 
@@ -37,9 +33,6 @@ export const supabaseAdmin = createClient(
       headers: {
         'X-Client-Info': 'supabase-js-server'
       }
-    },
-    db: {
-      schema: 'public'
     }
   }
 )
