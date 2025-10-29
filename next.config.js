@@ -19,6 +19,10 @@ const nextConfig = {
       },
     ];
   },
+  // Vercelリージョン設定
+  experimental: {
+    serverComponentsExternalPackages: ['@supabase/supabase-js']
+  }
 };
 
 module.exports = nextConfig;
